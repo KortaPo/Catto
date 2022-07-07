@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "catto"
-version = "1.0.4"
+version = "1.0.5.dev0"
 authors = ["KortaPo"]
 description = "A simple command line tool made for downloading cute animal images, gifs for you."
 license = "BSD 3 CLAUSE"
@@ -28,7 +28,7 @@ pytest = "^7.1.2"
 taskipy = "^1.10.2"
 
 [tool.black]
-line-length = 120
+line-length = 80
 
 [tool.pyright]
 typeCheckingMode = "strict"
@@ -43,12 +43,12 @@ ignore = [
 [tool.isort]
 profile = "black"
 py_version = 38
-line_length = 100
+line_length = 80
 combine_as_imports = true
 filter_files = true
 
 [tool.poetry.scripts]
-catto = "src.catto.main:app"
+catto = "catto.main:app"
 
 
 [tool.taskipy.scripts]
