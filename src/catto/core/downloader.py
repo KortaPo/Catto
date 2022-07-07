@@ -27,12 +27,14 @@ class Client:
 
     def __init__(self):
         self.logger = loguru.logger
-        self.version = "1.0.4"
+        self.version = "1.0.5.dev0"
         self.__backoff = ExponentialBackoff(base=0.05, maximum_tries=5)
         self.session = requests.Session()
         self.__inner_url: Optional[str] = None
 
-    def fetch_image_url_of_endpoint(self, animal: AnimalAPIEndpointEnum) -> Optional[str]:
+    def fetch_image_url_of_endpoint(
+        self, animal: AnimalAPIEndpointEnum
+    ) -> Optional[str]:
         """
         This method fetches and returns the image url from the API for the specified animal category.
 
@@ -54,20 +56,22 @@ class Client:
 
         data: Dict[str, str] = response.json()
         enum_data = AnimalResponseEnum[animal.name]
-        # This is a nifty way to get the image url from the json response. All I am doing is that I have an Enum
-        # of the keys in the json response for each url for each animal category, and I am getting the value of
-        # Enum, which basically stores the key, for example, https://some-random-api.ml/animal/cat, If you make a GET
-        # request to the API, the API returns a json response, the image url is stored in the key named as 'image' and
-        # KeyResponseImage.cats.value returns 'image' and then I index the json response with that key.
-        # For example, if I have a json response like this:
+        # This is a nifty way to get the image url from the json response. All I am doing is that I have an Enum of
+        # the keys in the json response for each url for each animal category, and I am getting the value of Enum,
+        # which basically stores the key, for example, https://some-random-api.ml/animal/cat. If I make a GET HTTP
+        # request to the API endpoint, I get a json response such as:
         # {
-        #     "image": "https://some-random-api.ml/animal/cat/image.jpg",
-        #     "fact": "https://some-random-api.ml/animal/cat/fact.txt"
+        # "fact": "A random fact about cats",
+        # "image": "some_image_url"
         # }
-        # Then I can get the image url by doing:
-        # data[AnimalResponseEnum.cats.value.key_that_contains_image]
-        # This is a lazy way to get the image url from the json response, this is useful incase the API response
-        # changes.
+        # There are two keys in the json response, one for the fact and one for the
+        # image. The json response for the speficied endpoint is mapped in a dataclass called as ResponseInterface,
+        # Each of the endpoint's json responses are mapped in the class ResponseInterface, which is stored in an Enum
+        # called AnimalResponseEnum. So whenever I index the enum using a specific animal category, I get a dataclass
+        # that contains the keys for the fact and image, and I can get the value of the key that I need.
+        # For e.g.
+        # AnimalResponseEnum.cats.value.key_that_contains_fact will return "fact" which is the key that contains the
+        # fact about cats in the json response.
         # This is just a way to avoid unnecessary if-else statements.
         url_of_image: str = data[
             enum_data.value.key_that_contains_image_url
@@ -75,7 +79,9 @@ class Client:
         # the Enum which stores the key.
         return url_of_image
 
-    def fetch_fact_about_the_animal(self, animal: AnimalAPIEndpointEnum) -> Optional[str]:
+    def fetch_fact_about_the_animal(
+        self, animal: AnimalAPIEndpointEnum
+    ) -> Optional[str]:
         """
         This method gets a random factual information about the specified animal category from
         the enum :class:`AnimalAPIEndpoint`.
@@ -105,13 +111,16 @@ class Client:
             )
         return fact
 
-    def save_image_from_url(self, url_of_image: str, path: Path) -> None:
+    def save_image_from_url(
+        self, url_of_image: str, path: Path, animal: AnimalAPIEndpointEnum
+    ) -> None:
         """
         This method takes an image url, fetches it, and saves it to the specified path.
 
         Parameters:
             url_of_image (str): This parameter takes the url of the image to download.
             path (pathlib.Path): This parameter takes the path to the directory where the image needs to be saved.
+            animal (AnimalAPIEndpointEnum): This parameter takes the animal type that the user chose.
 
         Raises:
             PathNotFound: If the directory does not exist.
@@ -134,22 +143,26 @@ class Client:
             raise InvalidImage(f"Exception occurred while opening image: {e}")
 
         image.save(
-            f"{str(path.absolute())}/image-{secrets.token_hex(4)}.{image.format.lower()}",
+            f"{str(path.absolute())}/{animal.name}-image-{secrets.token_hex(4)}.{image.format.lower()}",
             format=image.format.lower(),
         )
         return
 
-    def download(self, animal: AnimalAPIEndpointEnum, amount: int, path: Path) -> None:
+    def download(
+        self, animal: AnimalAPIEndpointEnum, amount: int, path: Path
+    ) -> None:
         """
         This method downloads the image from the url and saves it to the path.
 
         Parameters:
-            animal (AnimalAPIEndpointEnum): This paramter takes the category of animal to download.
+            animal (AnimalAPIEndpointEnum): This parameter takes the category of animal to download.
             path (pathlib.Path): This parameter takes the path to the directory to download the images into.
             amount (int): This paramter takes the amount of images to download.
         """
         try:
-            ImageEnum = AnimalAPIEndpointEnum[animal.name]  # returns the enum for that
+            ImageEnum = AnimalAPIEndpointEnum[
+                animal.name
+            ]  # returns the enum for that
             # animal
 
         except KeyError:
@@ -162,10 +175,14 @@ class Client:
             data = self.fetch_image_url_of_endpoint(animal=ImageEnum)
             self.__inner_url = data
             try:
-                self.save_image_from_url(url_of_image=data, path=path)
+                self.save_image_from_url(
+                    url_of_image=data, path=path, animal=ImageEnum
+                )
 
             except InvalidImage:
-                self.logger.error(f"Image failed to load due to invalid image url: {self.__inner_url}, skipping image.")
+                self.logger.error(
+                    f"Image failed to load due to invalid image url: {self.__inner_url}, skipping image."
+                )
                 continue
 
             except PathNotFound:
@@ -176,6 +193,8 @@ class Client:
                 range(amount),
                 description=f"[bold][magenta]{i + 1}.) Downloading image: [bold][green]{self.__inner_url}",
             ):
-                time.sleep(self.__backoff.calculate())  # This is a simple ratelimit handler to avoid
+                time.sleep(
+                    self.__backoff.calculate()
+                )  # This is a simple ratelimit handler to avoid
                 # being banned from the API.
         return
