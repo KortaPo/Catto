@@ -1,3 +1,4 @@
 from .__init__ import app
 
-app()
+if __name__ == "__main__":
+    app()
