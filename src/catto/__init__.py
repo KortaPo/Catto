@@ -5,10 +5,13 @@ import requests
 import typer
 from rich.table import Table
 
+
 from .core.downloader import Client
 from .core.interactive import Controller
 from .utils.enums import AnimalAPIEndpointEnum, ColorEnum
 from .utils.helpers import interactive_print
+from .utils.exceptions import AnimalFactNotFound
+
 
 controller = Controller()
 client = Client()
@@ -25,7 +28,8 @@ app = typer.Typer(
 
 
 @app.command(
-    name="download", help="Use this command to download cute animal images manually in a command line fashion."
+    name="download",
+    help="Use this command to download cute animal images manually in a command line fashion.",
 )
 def catto_download_command(
     category: str = typer.Option(
@@ -34,9 +38,17 @@ def catto_download_command(
         default="cats",
         show_default=True,
     ),
-    amount: int = typer.Option(min=1, max=100, default=..., help="Pass the amount of animal images to be downloaded."),
+    amount: int = typer.Option(
+        min=1,
+        max=100,
+        default=...,
+        help="Pass the amount of animal images to be downloaded.",
+    ),
     path: str = typer.Option(
-        help="Pass the directory where the images will be downloaded.", exists=True, dir_okay=True, default=...
+        help="Pass the directory where the images will be downloaded.",
+        exists=True,
+        dir_okay=True,
+        default=...,
     ),
 ) -> None:
     """
@@ -48,10 +60,16 @@ def catto_download_command(
     table.add_column("Amount", style="bold", no_wrap=True)
     table.add_column("Directory", style="bold", no_wrap=True)
     table.add_column("Path", style="bold", no_wrap=True)
-    table.add_row(category, str(amount), directory.name, str(directory.absolute()))
+    table.add_row(
+        category, str(amount), directory.name, str(directory.absolute())
+    )
     controller.console.print(table)
 
-    client.download(animal=AnimalAPIEndpointEnum[category.lower()], amount=amount, path=directory)
+    client.download(
+        animal=AnimalAPIEndpointEnum[category.lower()],
+        amount=amount,
+        path=directory,
+    )
     interactive_print(
         text=f"Downloaded '{amount}' images of '{category}' in '{directory.name}' successfully!",
         color=ColorEnum.green,
@@ -66,7 +84,9 @@ def catto_download_command(
     return
 
 
-@app.command("interactive", help="Run catto in interactive mode. Try it and see!")
+@app.command(
+    "interactive", help="Run catto in interactive mode. Try it and see!"
+)
 def interactive_command() -> None:
     """
     This function is the command "catto interactive" for running catto in interactive mode.
@@ -92,7 +112,7 @@ def version_command() -> None:
         "Catto": f"v{client.version}",
         "Python": f"v{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}-"
         f"{sys.version_info.releaselevel}",
-        "requests": f"v{requests.__version__}",
+        "Requests": f"v{requests.__version__}",
         "Typer": f"v{typer.__version__}",
     }
 
@@ -104,13 +124,16 @@ def version_command() -> None:
 
     for key, value in entries.items():
         i = key.index(key) + 1
-        table.add_row(f"{str(i)}.)", key, value)
+        table.add_row(str(i), key, value)
 
     controller.console.print(table)
     return
 
 
-@app.command("status", help="Check the status of each animal API endpoint, Catto is currently using.")
+@app.command(
+    "status",
+    help="Check the status of each animal API endpoint, Catto is currently using.",
+)
 def status_command() -> None:
     """
     This function is the command "catto status" that shows the status of each API endpoint, Catto uses for
@@ -128,20 +151,27 @@ def status_command() -> None:
         try:
             i = endpoints.index(endpoint) + 1
             response = requests.get(endpoint)
-            table.add_row(f"{str(i)}.)", endpoint, str(response.status_code), response.reason)
+            table.add_row(
+                f"{i}.)",
+                endpoint,
+                str(response.status_code),
+                response.reason,
+            )
         except Exception as e:
             interactive_print(
                 f"Exception occurred while making an GET HTTP request to {endpoint}:\n{e}",
-                color=ColorEnum.blue,
+                color=ColorEnum.red,
                 bold=True,
                 end_with_newline=True,
-                specific_words_to_color={endpoint: ColorEnum.red},
+                specific_words_to_color={endpoint: ColorEnum.blue},
             )
     controller.console.print(table)
     return
 
 
-@app.command("show-all-animals", help="This command shows all the categories of animals.")
+@app.command(
+    "show-all-animals", help="This command shows all the categories of animals.",
+)
 def all_animals_command() -> None:
     """
     This function is the command "catto show-all-animals" that shows the status of each API endpoint.
@@ -154,16 +184,54 @@ def all_animals_command() -> None:
 
     for endpoint in endpoints:
         i = endpoints.index(endpoint) + 1
-        table.add_row(f"{str(i)}.)", endpoint.name, endpoint.value)
+        table.add_row(f"{i}.)", endpoint.name, endpoint.value)
 
     controller.console.print(table)
     return
 
 
-@app.command(name="logo", help="Print the catto logo.")
+@app.command(name="logo", help="Print the catto logo.", context_settings=dict(logo_option_names=["-l", "--logo"]))
 def logo_command():
     """
     This function is the command "catto logo" for printing the catto logo.
     """
+    interactive_print(
+        text="Behold the cool logo of catto: ",
+        bold=True,
+        color=ColorEnum.cyan,
+        end_with_newline=True,
+    )
     controller.print_logo(typewriter_effect=True)
     return
+
+
+@app.command(name="fact", help="Get a fun fact about the specified animal.")
+def fact_command(
+    category: str = typer.Option(
+        help=f"Choose between different animals categories to download images from.\nCategories are: "
+        f"{', '.join([animal.name for animal in AnimalAPIEndpointEnum])}.",
+        default="cats",
+        show_default=True,
+    )
+):
+    """
+    This function is the command "catto logo" for printing the catto logo.
+    """
+    animal = AnimalAPIEndpointEnum[category.lower()]
+    try:
+        fact = controller.fetch_random_fact_about_the_selected_animal(animal)
+        interactive_print(
+            f"A fun fact about {animal.name}!:\n{fact}",
+            color=ColorEnum.cyan,
+            bold=True,
+            end_with_newline=True,
+            flush=True,
+        )
+    except AnimalFactNotFound:
+        interactive_print(
+            f"Sorry, no fact found for '{animal.name}', sadly.",
+            color=ColorEnum.red,
+            bold=True,
+            end_with_newline=True,
+            specific_words_to_color={animal.name: ColorEnum.blue},
+        )
