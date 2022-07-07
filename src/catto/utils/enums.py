@@ -1,7 +1,12 @@
 from dataclasses import dataclass
 from enum import Enum
 
-__all__ = ("AnimalAPIEndpointEnum", "AnimalResponseEnum", "ColorEnum")
+__all__ = (
+    "AnimalAPIEndpointEnum",
+    "AnimalResponseEnum",
+    "ColorEnum",
+    "LogLevel",
+)
 
 from typing import Optional
 
@@ -42,8 +47,8 @@ class ResponseInterface:
 
 class AnimalResponseEnum(Enum):
     """
-    This :class:`Enum` stores the API response keys in :class:`ResponseInterface` which contain the image url and the fact
-    for the specified animal API endpoint, as reffered in the :class:`AnimalAPIEndpoint` Enum.
+    This :class:`Enum` stores the API response keys stored as :class:`ResponseInterface` which contains
+    the image url and the fact for the specified animal API endpoint, as reffered in the :class:`AnimalAPIEndpoint` Enum.
     This enum basically maps the keys in the JSON response that contains the image URL for each animal API endpoint.
     """
 
@@ -54,8 +59,12 @@ class AnimalResponseEnum(Enum):
     birds = ResponseInterface(AnimalAPIEndpointEnum.birds, "image", "fact")
     foxes = ResponseInterface(AnimalAPIEndpointEnum.foxes, "image", "fact")
     pandas = ResponseInterface(AnimalAPIEndpointEnum.pandas, "image", "fact")
-    redpandas = ResponseInterface(AnimalAPIEndpointEnum.redpandas, "image", "fact")
-    kangaroo = ResponseInterface(AnimalAPIEndpointEnum.kangaroo, "image", "fact")
+    redpandas = ResponseInterface(
+        AnimalAPIEndpointEnum.redpandas, "image", "fact"
+    )
+    kangaroo = ResponseInterface(
+        AnimalAPIEndpointEnum.kangaroo, "image", "fact"
+    )
     raccoon = ResponseInterface(AnimalAPIEndpointEnum.raccoon, "image", "fact")
     koala = ResponseInterface(AnimalAPIEndpointEnum.koala, "image", "fact")
 
@@ -87,3 +96,16 @@ class ColorEnum(Enum):
 
     def __repr__(self):
         return f"{self.__class__.__name__}.{self.name}"
+
+
+class LogLevel(Enum):
+    """
+    This class subclasses :class:`Enum` and creates a simple enumeration for different logging level for various
+    key information.
+    """
+
+    warn = "Warning"
+    debug = "Debugging"
+    info = "Information"
+    error = "Critical Error"
+    fail = "Failure"
